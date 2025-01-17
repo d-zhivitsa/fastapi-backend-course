@@ -70,8 +70,8 @@ class TaskManager:
 
 # Настраиваем параметры jsonbin.io
 BASE_URL = "https://api.jsonbin.io/v3"
-API_KEY = "$2a$10$JKwnSYVa3.z22z6TR74SF.iXgFgPbaL2Fkn3d2wA167LfmGGAw.s6"  # Замените на ваш ключ API
-BIN_ID = "678a5e7ae41b4d34e478e10d"  # Замените на ваш bin ID
+API_KEY = "$2a$10$JKwnSYVa3.z22z6TR74SF.iXgFgPbaL2Fkn3d2wA167LfmGGAw.s6"  # ключ API
+BIN_ID = "678a5e7ae41b4d34e478e10d"  # bin ID
 
 # Создаём объект TaskManager для работы с jsonbin.io
 task_manager = TaskManager(BASE_URL, API_KEY, BIN_ID)
