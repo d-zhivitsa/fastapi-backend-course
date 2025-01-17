@@ -15,10 +15,7 @@ class TaskManager:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.bin_id = bin_id
-        self.headers = {
-            "X-Master-Key": self.api_key,
-            "Content-Type": "application/json"
-        }
+        self.headers = {"X-Master-Key": self.api_key, "Content-Type": "application/json"}
 
     def load_tasks(self) -> List[Task]:
         """Загружает задачи из jsonbin.io."""
@@ -34,19 +31,9 @@ class TaskManager:
             raise HTTPException(status_code=response.status_code, detail=response.text)
 
     def save_tasks(self, tasks: List[Task]):
-        """Сохраняет задачи в jsonbin.io с использованием версионности."""
+        """Сохраняет задачи в jsonbin.io."""
         url = f"{self.base_url}/b/{self.bin_id}"
         data = {"tasks": [task.dict() for task in tasks]}
-        # Получение текущей версии
-        version_url = f"{self.base_url}/b/{self.bin_id}/meta"
-        version_response = requests.get(version_url, headers=self.headers)
-        if version_response.status_code == 200:
-            current_version = version_response.json().get("metadata", {}).get("version")
-            self.headers["X-Version-Match"] = str(current_version)
-        else:
-            raise HTTPException(status_code=500, detail="Не удалось получить текущую версию.")
-
-        # Сохранение с указанием версии
         response = requests.put(url, headers=self.headers, json=data)
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
@@ -83,8 +70,8 @@ class TaskManager:
 
 # Настраиваем параметры jsonbin.io
 BASE_URL = "https://api.jsonbin.io/v3"
-API_KEY = "$2a$10$JKwnSYVa3.z22z6TR74SF.iXgFgPbaL2Fkn3d2wA167LfmGGAw.s6"  # ключ API
-BIN_ID = "678a5e7ae41b4d34e478e10d"  # bin ID
+API_KEY = "$2a$10$JKwnSYVa3.z22z6TR74SF.iXgFgPbaL2Fkn3d2wA167LfmGGAw.s6"  # Замените на ваш ключ API
+BIN_ID = "678a5e7ae41b4d34e478e10d"  # Замените на ваш bin ID
 
 # Создаём объект TaskManager для работы с jsonbin.io
 task_manager = TaskManager(BASE_URL, API_KEY, BIN_ID)
