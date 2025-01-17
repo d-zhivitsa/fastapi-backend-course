@@ -29,7 +29,7 @@ class TaskManager:
     def save_tasks(self):
         """Сохраняет задачи в файл."""
         with open(self.file_path, "w") as file:
-            json.dump([task.dict() for task in self.tasks.values()], file, sort_keys=True)
+            json.dump([{"id": task.id, "name": task.name, "status": task.status} for task in self.tasks.values()], file, sort_keys=True)
 
     def get_tasks(self) -> List[Task]:
         """Возвращает список всех задач."""
