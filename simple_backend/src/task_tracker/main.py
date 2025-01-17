@@ -33,7 +33,7 @@ class TaskManager:
 
     def get_tasks(self) -> List[Task]:
         """Возвращает список всех задач."""
-        return sorted(list(self.tasks.values()), key=lambda x:x[0])
+        return sorted(list(self.tasks.values()), key=lambda task: task.id)
 
     def add_task(self, task: Task):
         """Добавляет новую задачу, если её ID уникален."""
