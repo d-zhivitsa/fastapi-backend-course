@@ -1,65 +1,80 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict
-import json
+from typing import List
+import requests
 
 app = FastAPI()
-
 
 class Task(BaseModel):
     id: int  # Уникальный идентификатор
     name: str  # Название
     status: str  # Статус
 
-# Класс для работы с задачами, сохранёнными в файле
 class TaskManager:
-    def __init__(self, file_path: str):
-        self.file_path = file_path  # Путь к файлу для хранения задач
-        self.tasks = self.load_tasks()  # Загружаем задачи при старте программы
+    def __init__(self, base_url: str, api_key: str, bin_id: str):
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.bin_id = bin_id
+        self.headers = {"X-Master-Key": self.api_key, "Content-Type": "application/json"}
 
-    def load_tasks(self) -> Dict[int, Task]:
-        """Загружает задачи из файла и возвращает их как словарь {id: Task}."""
-        try:
-            with open(self.file_path, "r") as file:
-                tasks_data = json.load(file)
-                return {task["id"]: Task(**task) for task in tasks_data}
-        except (FileNotFoundError, json.JSONDecodeError):
-            return {}
+    def load_tasks(self) -> List[Task]:
+        """Загружает задачи из jsonbin.io."""
+        url = f"{self.base_url}/b/{self.bin_id}"
+        response = requests.get(url, headers=self.headers)
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                return [Task(**task) for task in data.get("record", {}).get("tasks", [])]
+            except Exception:
+                raise HTTPException(status_code=500, detail="Ошибка обработки данных из хранилища.")
+        else:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
 
-    def save_tasks(self):
-        """Сохраняет задачи в файл."""
-        with open(self.file_path, "w") as file:
-            json.dump([{"id": task.id, "name": task.name, "status": task.status} for task in self.tasks.values()], file, sort_keys=True)
+    def save_tasks(self, tasks: List[Task]):
+        """Сохраняет задачи в jsonbin.io."""
+        url = f"{self.base_url}/b/{self.bin_id}"
+        data = {"tasks": [task.dict() for task in tasks]}
+        response = requests.put(url, headers=self.headers, json=data)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
 
     def get_tasks(self) -> List[Task]:
         """Возвращает список всех задач."""
-        return sorted(list(self.tasks.values()), key=lambda task: task.id)
+        return self.load_tasks()
 
     def add_task(self, task: Task):
         """Добавляет новую задачу, если её ID уникален."""
-        if task.id in self.tasks:
+        tasks = self.load_tasks()
+        if any(t.id == task.id for t in tasks):
             raise HTTPException(status_code=400, detail="Задача с таким ID уже существует")
-        self.tasks[task.id] = task
-        self.save_tasks()
+        tasks.append(task)
+        self.save_tasks(tasks)
 
     def update_task_status(self, task_id: int):
         """Обновляет статус задачи на 'updated' по её ID."""
-        if task_id in self.tasks:
-            self.tasks[task_id].status = "updated"
-            self.save_tasks()
-        else:
-            raise HTTPException(status_code=404, detail="Задача не найдена")
+        tasks = self.load_tasks()
+        for task in tasks:
+            if task.id == task_id:
+                task.status = "updated"
+                self.save_tasks(tasks)
+                return
+        raise HTTPException(status_code=404, detail="Задача не найдена")
 
     def delete_task(self, task_id: int):
         """Удаляет задачу по её ID."""
-        if task_id in self.tasks:
-            del self.tasks[task_id]
-            self.save_tasks()
-        else:
+        tasks = self.load_tasks()
+        tasks = [task for task in tasks if task.id != task_id]
+        if len(tasks) == len(self.load_tasks()):
             raise HTTPException(status_code=404, detail="Задача не найдена")
+        self.save_tasks(tasks)
 
-# Создаём объект TaskManager, который будет работать с файлом "tasks.json"
-task_manager = TaskManager("tasks.json")
+# Настраиваем параметры jsonbin.io
+BASE_URL = "https://api.jsonbin.io/v3"
+API_KEY = "$2a$10$JKwnSYVa3.z22z6TR74SF.iXgFgPbaL2Fkn3d2wA167LfmGGAw.s6"  # Замените на ваш ключ API
+BIN_ID = "678a5e7ae41b4d34e478e10d"  # Замените на ваш bin ID
+
+# Создаём объект TaskManager для работы с jsonbin.io
+task_manager = TaskManager(BASE_URL, API_KEY, BIN_ID)
 
 # Маршрут для получения всех задач
 @app.get("/tasks")
